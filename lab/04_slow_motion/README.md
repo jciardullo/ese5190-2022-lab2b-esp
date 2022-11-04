@@ -6,3 +6,5 @@ Update your sequencer to be able to slow down and speed up recordings/replay. On
 - give your sequencer the ability to select a range of output rates for both live and recorded input
 
 
+### Planning:
+Instead of using an array like the last section, I plan to store the button presses with their timestamp in a struct array, so that I can manipulate the time in between button presses.

@@ -13,3 +13,5 @@ Create a 'sequencer' that allows you to record BOOT button presses and play them
     - outputs: neopixel color, neopixel brightness, data over serial, register read/write commands
 
 
+###Planning:
+I plan to define an array and store the values of the button over a series of time steps in the array, which the user can call and will iterate over the entries/write to the neopixel register. Using a modified REPL from the previous section, I plan to process actions through the user typing in commands. 
