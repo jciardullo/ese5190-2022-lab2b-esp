@@ -1,0 +1,143 @@
+;
+; Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
+;
+; SPDX-License-Identifier: BSD-3-Clause
+;
+
+.program ws2812
+.side_set 1
+
+.define public T1 2
+.define public T2 5
+.define public T3 3
+
+.lang_opt python sideset_init = pico.PIO.OUT_HIGH
+.lang_opt python out_init     = pico.PIO.OUT_HIGH
+.lang_opt python out_shiftdir = 1
+
+.wrap_target
+bitloop:
+    out x, 1       side 0 [T3 - 1] ; Side-set still takes place when instruction stalls
+    jmp !x do_zero side 1 [T1 - 1] ; Branch on the bit we shifted out. Positive pulse
+do_one:
+    jmp  bitloop   side 1 [T2 - 1] ; Continue driving high, for a long pulse
+do_zero:
+    nop            side 0 [T2 - 1] ; Or drive low, for a short pulse
+.wrap
+
+% c-sdk {
+#include "hardware/clocks.h"
+
+static inline void ws2812_program_init(PIO pio, uint sm, uint offset, uint pin, float freq, bool rgbw) {
+
+    pio_gpio_init(pio, pin);
+    pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, true);
+
+    pio_sm_config c = ws2812_program_get_default_config(offset);
+    sm_config_set_sideset_pins(&c, pin);
+    sm_config_set_out_shift(&c, false, true, rgbw ? 32 : 24);
+    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX);
+
+    int cycles_per_bit = ws2812_T1 + ws2812_T2 + ws2812_T3;
+    float div = clock_get_hz(clk_sys) / (freq * cycles_per_bit);
+    sm_config_set_clkdiv(&c, div);
+
+    pio_sm_init(pio, sm, offset, &c);
+    pio_sm_set_enabled(pio, sm, true);
+}
+%}
+
+.program ws2812_parallel
+
+.define public T1 2
+.define public T2 5
+.define public T3 3
+
+.wrap_target
+    out x, 32
+    mov pins, !null [T1-1]
+    mov pins, x     [T2-1]
+    mov pins, null  [T3-2]
+.wrap
+
+% c-sdk {
+#include "hardware/clocks.h"
+
+static inline void ws2812_parallel_program_init(PIO pio, uint sm, uint offset, uint pin_base, uint pin_count, float freq) {
+    for(uint i=pin_base; i<pin_base+pin_count; i++) {
+        pio_gpio_init(pio, i);
+    }
+    pio_sm_set_consecutive_pindirs(pio, sm, pin_base, pin_count, true);
+
+    pio_sm_config c = ws2812_parallel_program_get_default_config(offset);
+    sm_config_set_out_shift(&c, true, true, 32);
+    sm_config_set_out_pins(&c, pin_base, pin_count);
+    sm_config_set_set_pins(&c, pin_base, pin_count);
+    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX);
+
+    int cycles_per_bit = ws2812_parallel_T1 + ws2812_parallel_T2 + ws2812_parallel_T3;
+    float div = clock_get_hz(clk_sys) / (freq * cycles_per_bit);
+    sm_config_set_clkdiv(&c, div);
+
+    pio_sm_init(pio, sm, offset, &c);
+    pio_sm_set_enabled(pio, sm, true);
+}
+%}
+
+
+;-------------------------------------------------------------------------------------------------
+
+; @author: Ruturaj A. Nanoti
+; @ brief: This is a pio file to integrate the sequencer with PIO.
+; Reference: https://github.com/raspberrypi/pico-examples/blob/master/pio/hello_pio/hello.pio
+
+; Start of the program
+.program boot_status
+
+; Loop continuously and get data from the TX FIFO, where if the FIFO is empty
+; the program stalls.
+set pindirs, 0
+
+.wrap_target
+
+loop_label:
+    in pins, 1
+    push
+    jmp loop_label
+.wrap
+
+% c-sdk {
+static inline void boot_status_program_init(PIO pio, uint sm, uint offset, uint pin) {
+
+    // Here the `offset` parameter to this function is passed to the 
+    // `<program_name>_program_get_default_config` function, where the
+    // `offset` parameter is the offset in memory where our program is
+    // loaded into memory at runtime based on the availability of memory.
+    // This returns a variable of type `pio_sm_config`.
+    pio_sm_config seq = boot_status_program_get_default_config(offset);
+    
+    // We use the `seq` (structure to modfiy) variable to set the GPIO
+    // pins associated with the PIO to input mode. Here the first parameter
+    // is the pointer to the modifiable struct (which is `seq` in this case),
+    // `in_base` which is the first pin to set as input (which is the `pin`
+    // parameter passed to this function).
+    sm_config_set_in_pins(&seq, pin);
+    
+    sm_config_set_in_shift(&seq, false, true, 0);
+
+    // Set this pin's GPIO function (connect PIO to the pad). Map the `pin`
+    // to that particular `pio`.
+    pio_gpio_init(pio, pin);
+
+    // Set the pin direction to input at the PIO, pass the PIO instance, the SM 
+    // in that PIO, the `pin_base`, the number of pins from the pin base to be set
+    // as input, and whether the pin direction is output (which is false).
+    pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, false);
+
+
+    // Load our configuration, and jump to the start of the program
+    pio_sm_init(pio, sm, offset, &seq);
+    // Set the state machine running
+    pio_sm_set_enabled(pio, sm, true);
+}
+%}

@@ -1,6 +1,6 @@
-### TODO:
+### Overview:
 
-- modify your sequencer to use the PIO as its primary I/O engine, including the ability to R/W any register 
+Same as parts 3 and 4, except now the boot button is being read with the help of PIO instead. 
 
 
 

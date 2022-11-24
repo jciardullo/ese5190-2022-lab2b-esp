@@ -1,3 +1,5 @@
-### TODO:
+### Overview:
 
-Add support for your custom circuit board to your sequencer, and give a demo.
+For my circuit, I added a potentiometer that could read by the board and its analog values would control the brightness of the onboard neopixel LED! My protoboard setup wasn't working so I had to use a breadboard instead.
+
+![](lab10.gif)

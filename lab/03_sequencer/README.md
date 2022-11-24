@@ -1,17 +1,15 @@
-### TODO:
+### Overview:
 
-Create a 'sequencer' that allows you to record BOOT button presses and play them on the Neopixel, and also play a sequence of read/write commands. You should be able to:
-- record at a least a few seconds of button input to your RP2040 (in RAM)
-- replay a recorded sequence on your NeoPixel
-- loop a recording
-- save a recording to your laptop (the Python Serial library is one way to do this)
-- play a recording from your laptop
-- record 'macros' (a sequence of console commands) based on keystrokes in your serial console
-- hand-edit a list of register read/write commands on your laptop, and play them on the RP2040
-- include multiple I/O sources in a recording, and remap among the following:
-    - inputs: BOOT button, console commands, register read/write commands
-    - outputs: neopixel color, neopixel brightness, data over serial, register read/write commands
+The python program's terminal asks the user to choose from a number of options:
 
+* Record 5 seconds of button input (R)
+* Replay the recorded sequence (P)
+* Loop the recording (L)
+* Save the recording to your laptop as recording.txt (S)
+* Load the recording from your laptop's recording.txt (LD)
 
-###Planning:
-I plan to define an array and store the values of the button over a series of time steps in the array, which the user can call and will iterate over the entries/write to the neopixel register. Using a modified REPL from the previous section, I plan to process actions through the user typing in commands. 
+The user can choose pick any option and interact with the boot button as the recording input for the program.
+
+![](lab3.gif)
+
+You can test the save and load features with the pre-existing recording.txt file (which is the same sequence shown in the gif).
